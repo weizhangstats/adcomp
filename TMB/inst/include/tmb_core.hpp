@@ -219,7 +219,7 @@ asMatrix<Type> ( TMB_OBJECTIVE_PTR -> getShape( #name, &Rf_isMatrix) ), \
     \ingroup macros*/
 #define PARAMETER_VECTOR(name)                                          \
 vector<Type> name(TMB_OBJECTIVE_PTR -> fillShape(                       \
-asVector<Type>(TMB_OBJECTIVE_PTR -> getShape(#name, &Rf_isNumeric)),    \
+asVector<Type>(TMB_OBJECTIVE_PTR -> getShape(#name, &Rf_isReal   )),    \
 #name));
 
 /** \brief Get parameter scalar from R and declare it as Type
@@ -237,10 +237,10 @@ asVector<Type>(TMB_OBJECTIVE_PTR -> getShape(#name,&isNumericScalar)),  \
 vector<Type> name;                                                      \
 if (!Rf_isNull(getListElement(TMB_OBJECTIVE_PTR -> parameters,#name))){ \
   name = TMB_OBJECTIVE_PTR -> fillShape(asVector<Type>(                 \
-         TMB_OBJECTIVE_PTR -> getShape(#name, &Rf_isNumeric)), #name);  \
+         TMB_OBJECTIVE_PTR -> getShape(#name, &Rf_isReal   )), #name);  \
 } else {                                                                \
   name = asVector<Type>(getListElement(                                 \
-         TMB_OBJECTIVE_PTR -> data,#name,&Rf_isNumeric));               \
+         TMB_OBJECTIVE_PTR -> data,#name,&Rf_isReal   ));               \
 }
 
 /** \brief Get data matrix from R and declare it as matrix<Type>
@@ -256,6 +256,7 @@ Type name(asVector<Type>(getListElement(TMB_OBJECTIVE_PTR -> data,      \
 #name,&isNumericScalar))[0]);
 
 /** \brief Get data scalar from R and declare it as int
+    \note `NA` integers are not supported
     \ingroup macros */
 #define DATA_INTEGER(name) int name(CppAD::Integer(asVector<Type>(      \
 getListElement(TMB_OBJECTIVE_PTR -> data,                               \
@@ -279,13 +280,14 @@ getListElement(TMB_OBJECTIVE_PTR -> data,                               \
     \endverbatim
     \ingroup macros */
 #define DATA_FACTOR(name) vector<int> name(asVector<int>(               \
-getListElement(TMB_OBJECTIVE_PTR -> data, #name, &Rf_isNumeric)));
+getListElement(TMB_OBJECTIVE_PTR -> data, #name, &Rf_isReal   )));
 
 /** \brief Get data vector of type "integer" from R and declare it
     vector<int>. (DATA_INTEGER() is for a scalar integer)
+    \note `NA` integers are not supported
     \ingroup macros */
 #define DATA_IVECTOR(name) vector<int> name(asVector<int>(              \
-getListElement(TMB_OBJECTIVE_PTR -> data, #name, &Rf_isNumeric)));
+getListElement(TMB_OBJECTIVE_PTR -> data, #name, &Rf_isReal   )));
 
 /** \brief Get the number of levels of a data factor from R
     \ingroup macros */
@@ -367,12 +369,14 @@ tmbutils::asArray<Type>(TMB_OBJECTIVE_PTR -> getShape(                  \
 #name, &Rf_isArray)), #name));
 
 /** \brief Get data matrix from R and declare it as matrix<int>
+    \note `NA` integers are not supported
     \ingroup macros */
 #define DATA_IMATRIX(name)                                              \
 matrix<int> name(asMatrix<int>(                                         \
 getListElement(TMB_OBJECTIVE_PTR -> data,#name, &Rf_isMatrix)));
 
 /** \brief Get data array from R and declare it as array<int>
+    \note `NA` integers are not supported
     \ingroup macros */
 #define DATA_IARRAY(name)                                               \
 tmbutils::array<int> name(tmbutils::asArray<int>(                       \
@@ -519,10 +523,10 @@ struct data_indicator : VT{
 data_indicator<tmbutils::array<Type> > name(obs, true);                 \
 if (!Rf_isNull(getListElement(TMB_OBJECTIVE_PTR -> parameters,#name))){ \
   name.fill( TMB_OBJECTIVE_PTR -> fillShape(asVector<Type>(             \
-             TMB_OBJECTIVE_PTR -> getShape(#name, &Rf_isNumeric)),      \
+             TMB_OBJECTIVE_PTR -> getShape(#name, &Rf_isReal   )),      \
                                            #name),                      \
              Rf_getAttrib(                                              \
-                TMB_OBJECTIVE_PTR -> getShape(#name, &Rf_isNumeric),    \
+                TMB_OBJECTIVE_PTR -> getShape(#name, &Rf_isReal   ),    \
                 Rf_install("ord")) );                                   \
 }
 
@@ -535,10 +539,10 @@ if (!Rf_isNull(getListElement(TMB_OBJECTIVE_PTR -> parameters,#name))){ \
 data_indicator<tmbutils::vector<Type> > name(obs, true);                \
 if (!Rf_isNull(getListElement(TMB_OBJECTIVE_PTR -> parameters,#name))){ \
   name.fill( TMB_OBJECTIVE_PTR -> fillShape(asVector<Type>(             \
-             TMB_OBJECTIVE_PTR -> getShape(#name, &Rf_isNumeric)),      \
+             TMB_OBJECTIVE_PTR -> getShape(#name, &Rf_isReal   )),      \
                                            #name),                      \
              Rf_getAttrib(                                              \
-                TMB_OBJECTIVE_PTR -> getShape(#name, &Rf_isNumeric),    \
+                TMB_OBJECTIVE_PTR -> getShape(#name, &Rf_isReal   ),    \
                 Rf_install("ord")) );                                   \
 }
 
@@ -769,7 +773,7 @@ public:
 
   /** \brief Syncronize user's data object. It could be changed between calls to e.g. EvalDoubleFunObject */
   void sync_data() {
-    SEXP env = ENCLOS(this->report);
+    SEXP env = R_ParentEnv(this->report);
     this->data = Rf_findVar(Rf_install("data"), env);
   }
 
@@ -2642,17 +2646,18 @@ extern "C"
 extern "C"
 {
   void tmb_forward(SEXP f, const Eigen::VectorXd &x, Eigen::VectorXd &y) {
+    Eigen::Map<Eigen::VectorXd> y_map(y.data(), y.size());
 #ifdef CPPAD_FRAMEWORK
     SEXP tag=R_ExternalPtrTag(f);
     if(tag == Rf_install("ADFun")) {
       ADFun<double>* pf;
       pf = (ADFun<double>*) R_ExternalPtrAddr(f);
-      y = pf->Forward(0, x);
+      y_map = pf->Forward(0, x);
     } else
       if(tag == Rf_install("parallelADFun")) {
         parallelADFun<double>* pf;
         pf = (parallelADFun<double>*) R_ExternalPtrAddr(f);
-        y = pf->Forward(0, x);
+        y_map = pf->Forward(0, x);
       } else
         Rf_error("Unknown function pointer");
 #endif
@@ -2662,28 +2667,29 @@ extern "C"
     SEXP tag=R_ExternalPtrTag(f);
     if(tag == Rf_install("ADFun")) {
       adfun* pf = (adfun*) R_ExternalPtrAddr(f);
-      y = pf->forward(x);
+      y_map = pf->forward(x);
     } else
       if(tag == Rf_install("parallelADFun")) {
         parallelADFun<double>* pf;
         pf = (parallelADFun<double>*) R_ExternalPtrAddr(f);
-        y = pf->forward(x);
+        y_map = pf->forward(x);
       } else
         Rf_error("Unknown function pointer");
 #endif
   }
   void tmb_reverse(SEXP f, const Eigen::VectorXd &v, Eigen::VectorXd &y) {
+    Eigen::Map<Eigen::VectorXd> y_map(y.data(), y.size());
 #ifdef CPPAD_FRAMEWORK
     SEXP tag=R_ExternalPtrTag(f);
     if(tag == Rf_install("ADFun")) {
       ADFun<double>* pf;
       pf = (ADFun<double>*) R_ExternalPtrAddr(f);
-      y = pf->Reverse(1, v);
+      y_map = pf->Reverse(1, v);
     } else
       if(tag == Rf_install("parallelADFun")) {
         parallelADFun<double>* pf;
         pf = (parallelADFun<double>*) R_ExternalPtrAddr(f);
-        y = pf->Reverse(1, v);
+        y_map = pf->Reverse(1, v);
       } else
         Rf_error("Unknown function pointer");
 #endif
@@ -2693,12 +2699,12 @@ extern "C"
     SEXP tag=R_ExternalPtrTag(f);
     if(tag == Rf_install("ADFun")) {
       adfun* pf = (adfun*) R_ExternalPtrAddr(f);
-      y = pf->reverse(v);
+      y_map = pf->reverse(v);
     } else
       if(tag == Rf_install("parallelADFun")) {
         parallelADFun<double>* pf;
         pf = (parallelADFun<double>*) R_ExternalPtrAddr(f);
-        y = pf->reverse(v);
+        y_map = pf->reverse(v);
       } else
         Rf_error("Unknown function pointer");
 #endif

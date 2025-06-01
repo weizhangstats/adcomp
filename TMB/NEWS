@@ -1,4 +1,75 @@
 ------------------------------------------------------------------------
+TMB 1.9.17 (2025-03-08)
+------------------------------------------------------------------------
+
+o splinefun fixes:
+  Now handles parameter dependent x values and knots correctly.
+
+o New atomic functions: findInterval, subset, order, sort, fmod.
+
+o Replace non-API 'ENCLOS' by 'R_ParentEnv' (GH #405).
+
+o Fix CRAN ASAN issues reported for the 'tmbstan' package.
+
+o NA integer handling has been postponed as it broke parallelization.
+
+------------------------------------------------------------------------
+TMB 1.9.16 (2025-01-08)
+------------------------------------------------------------------------
+
+o Improved behavior for sdreport() when using 'bias.correct=TRUE'
+  without any random effects (GH #403).
+
+o dnbinom() impoved accuracy (GH #402).
+
+o Handle integer NAs correctly for DATA_I* macros (GH #400).
+
+------------------------------------------------------------------------
+TMB 1.9.15 (2024-09-09)
+------------------------------------------------------------------------
+
+o Add missing std::numeric_limits for 'TMBad' #398 (fixing undefined
+  behaviour in some cases)
+
+o Enable bitwise reproducible results for 'TMBad' by default
+
+------------------------------------------------------------------------
+TMB 1.9.14 (2024-07-03)
+------------------------------------------------------------------------
+
+o Fix C++20 compiler warning
+
+------------------------------------------------------------------------
+TMB 1.9.13 (2024-06-28)
+------------------------------------------------------------------------
+
+o Fix isNullPointer #395
+
+------------------------------------------------------------------------
+TMB 1.9.12 (2024-06-19)
+------------------------------------------------------------------------
+
+o Fix clang-19 build issue
+
+o use Matrix API for SEXP->(cholmod_factor *) coercion (#393)
+
+o Add TMB.Version() #387
+
+o Fix protection bug in REPORT(SparseMatrix)
+
+------------------------------------------------------------------------
+TMB 1.9.11 (2024-04-02)
+------------------------------------------------------------------------
+
+o Fix conflict between TMB and Eigen parallelization (GH #390).
+
+o Matrix ABI check no longer writes external file during installation
+  (GH #392).
+
+o Improved diagnostic messages when data of invalid storage mode is
+  passed to TMB (GH #391).
+
+------------------------------------------------------------------------
 TMB 1.9.10 (2023-12-12)
 ------------------------------------------------------------------------
 

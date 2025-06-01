@@ -85,6 +85,10 @@ if (!(x)) {                                                             \
 #endif
 #include "EigenWarnings/DisableStupidWarnings"
 #endif
+/* We cannot use Eigen's parallel matrix multiply for AD types (GH390). */
+#ifndef EIGEN_DONT_PARALLELIZE
+#define EIGEN_DONT_PARALLELIZE
+#endif
 #include <Eigen/Dense>
 
 // Default: Include Eigen/Sparse normally
@@ -111,11 +115,16 @@ using SparseMatrix = SparseMatrix_rename<T, Flags, StorageIndex>;
 #endif
 #endif
 
+// TMBad config variables
+/** \brief Use deterministic hash codes for tape optimizer ? */
+TMB_EXTERN bool tmbad_deterministic_hash;
+
 /* Include the CppAD library. (Always turn off debug for cppad) */
 #undef NDEBUG
 #define NDEBUG 1
 #include "cppad/cppad.hpp"
 #ifdef TMBAD_FRAMEWORK
+#define TMBAD_DETERMINISTIC_HASH tmbad_deterministic_hash
 #include "TMBad/TMBad.hpp"
 #include "TMBad/tmbad_allow_comparison.hpp"
 #include "TMBad/eigen_numtraits.hpp"
@@ -159,6 +168,11 @@ namespace TMBad {
   using std::isnan;
   bool isnan(const TMBad::ad_aug &x)CSKIP({ return isnan(x.Value()); })
 }
+// Add missing numeric_limits specialization
+namespace std {
+template<>
+struct numeric_limits<TMBad::ad_aug> : numeric_limits<TMBad::Scalar> { };
+}
 #endif
 
 /* Include the R library _after_ Eigen and CppAD. Otherwise, the R
@@ -167,6 +181,12 @@ namespace TMBad {
    CppAD when compiling with '-std=c++11'. */
 #include <R.h>
 #include <Rinternals.h>
+/* See WRE manual */
+#include <Rversion.h>
+#if R_VERSION < R_Version(4, 5, 0)
+#define R_ParentEnv(x) ENCLOS(x)
+#endif
+
 #include "toggle_thread_safe_R.hpp"
 void eigen_REprintf(const char* x)CSKIP({REprintf("%s",x);})
 
